@@ -1,0 +1,86 @@
+import 'package:flutter/material.dart';
+
+class ProfileScreen extends StatelessWidget {
+  const ProfileScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: SafeArea(child:Padding(padding: EdgeInsets.all(20),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                CircleAvatar(radius: 30,backgroundImage: AssetImage('assets/images/GettyImages-1315607788 2 (1).png'),),
+                SizedBox(width: 15),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [Text('Hello!' ,style: TextStyle(fontSize: 16, color: Colors.grey),), Text("Ahmed Saber",style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ))],
+                ),
+              ],
+            ),
+            SizedBox(height: 40),
+            Option(
+              icon: Icons.person_outline,
+              text: 'Profile',
+            ),
+            Option(
+              icon: Icons.lock_outline,
+              text: 'Change Password',
+            ),
+            Option(
+              icon: Icons.settings_outlined,
+              text: 'Settings',
+            ),
+
+
+          ],
+        ),
+      ),)
+
+    );
+  }
+}
+class Option extends StatelessWidget {
+  final String text;
+  final IconData icon;
+  const Option({super.key,required this.text,required this.icon});
+  @override
+  Widget build(BuildContext context){return GestureDetector(
+      onTap: () {
+  },
+    child: Container(
+
+    margin: const EdgeInsets.only(bottom: 15),
+    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+    decoration: BoxDecoration(
+    color: Colors.white,
+    borderRadius: BorderRadius.circular(16),
+    boxShadow: [
+    BoxShadow(
+    color: Colors.grey.withOpacity(0.1),
+    spreadRadius: 2,
+    blurRadius: 7,
+    offset: const Offset(0, 3),
+    ),
+    ],
+    ),
+    child: Row(
+    children: [
+    Icon(icon, color: Colors.black),
+    const SizedBox(width: 20),
+    Expanded(
+    child: Text(
+    text,
+    style: const TextStyle(fontSize: 16),
+    ),
+    ),
+    const Icon(Icons.arrow_forward_ios, size: 16),
+    ],
+    ),
+    ),);}
+
+}
