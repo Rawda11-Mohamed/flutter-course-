@@ -1,119 +1,121 @@
 import 'package:flutter/material.dart';
-import 'package:mvvmproject/core/widgets/default_btn.dart';
-import 'package:mvvmproject/core/utils/app_assets.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mvvmproject/features/data/models/task_model.dart';
+import 'package:mvvmproject/features/cubit/edit_task_cubit.dart';
+import 'package:mvvmproject/features/cubit/edit_task_state.dart';
+import 'package:mvvmproject/features/data/repo/auth_repo_imp.dart';
+import '../../../core/utils/app_colors.dart';
+import '../../../core/utils/app_paddings.dart';
+import '../../../core/widgets/default_btn.dart';
 
+class EditTaskScreen extends StatefulWidget {
+  final TaskModel model;
 
-class EditTaskScreen extends StatelessWidget {
-  const EditTaskScreen({super.key});
+  const EditTaskScreen({super.key, required this.model});
+
+  @override
+  State<EditTaskScreen> createState() => _EditTaskScreenState();
+}
+
+class _EditTaskScreenState extends State<EditTaskScreen> {
+  late TextEditingController titleController;
+  late TextEditingController descController;
+
+  @override
+  void initState() {
+    super.initState();
+    titleController = TextEditingController();
+    descController = TextEditingController();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Edit Task'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.delete),
-            color: Colors.red,
-            onPressed: () {},
-          ),
-        ],
+    return BlocProvider(
+      create: (context) => EditTaskCubit(
+        context.read<AuthRepoImp>(),
+        task: widget.model,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 30,
-                  backgroundImage: AssetImage(AppAssets.flag),
-                ),
-                const SizedBox(width: 16),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('In Progress', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                    const Text('Believe you can, and you’re halfway there.', style: TextStyle(fontSize: 14, color: Colors.grey)),
-                  ],
+      child: BlocConsumer<EditTaskCubit, EditTaskState>(
+        listener: (context, state) {
+          if (state is EditTaskSuccess) {
+            ScaffoldMessenger.of(context)
+                .showSnackBar(const SnackBar(content: Text('Task updated')));
+          }
+          if (state is EditTaskDeleted) {
+            Navigator.pop(context);
+          }
+        },
+        builder: (context, state) {
+          final cubit = EditTaskCubit.get(context);
+
+          titleController.text = cubit.task.title;
+          descController.text = cubit.task.description;
+
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('Edit Task'),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.delete),
+                  color: Colors.red,
+                  onPressed: () {
+                    cubit.deleteTask();
+                  },
                 ),
               ],
             ),
-            const SizedBox(height: 24),
-            DropdownButton<String>(
-              value: 'Home',
-              items: ['Home', 'Work'].map((value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Row(
-                    children: [
-                      Icon(Icons.home, color: Colors.pink),
-                      const SizedBox(width: 8),
-                      Text(value),
-                    ],
+            body: Padding(
+              padding: AppPaddings.defaultHomePadding,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: titleController,
+                    onChanged: (value) => cubit.updateTitle(value),
+                    decoration: InputDecoration(
+                      labelText: 'Title',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
                   ),
-                );
-              }).toList(),
-              onChanged: (_) {},
-            ),
-            const SizedBox(height: 16),
-            Container(
-              height: 50,
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
-              child: const Row(
-                children: [
-                  SizedBox(width: 8),
-                  Text('Grocery Shopping App', style: TextStyle(fontSize: 14)),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              height: 50,
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
-              child: const Row(
-                children: [
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Go for grocery to buy some products.',
-                      style: TextStyle(fontSize: 14),
-                      overflow: TextOverflow.ellipsis,
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: descController,
+                    onChanged: (value) => cubit.updateDescription(value),
+                    decoration: InputDecoration(
+                      labelText: 'Description',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  DefaultBtn(
+                    text: 'Mark as Done',
+                    onPressed: () {
+                      cubit.markAsDone();
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        cubit.updateTask();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                      ),
+                      child: const Text('Update'),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
-            Container(
-              height: 50,
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
-              child: const Row(
-                children: [
-                  SizedBox(width: 8),
-                  Icon(Icons.calendar_today, color: Colors.green),
-                  SizedBox(width: 8),
-                  Text('30 June, 2022  10:00 pm', style: TextStyle(fontSize: 14)),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            DefaultBtn(
-              text: 'Mark as Done',
-              onPressed: () {},
-            ),
-            const SizedBox(height: 16),
-            OutlinedButton(
-              onPressed: () {},
-              style: OutlinedButton.styleFrom(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                side: const BorderSide(color: Colors.green),
-              ),
-              child: const Text("Update", style: TextStyle(fontSize: 18, color: Colors.green)),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

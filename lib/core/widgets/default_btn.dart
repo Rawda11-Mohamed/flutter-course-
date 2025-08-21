@@ -1,32 +1,33 @@
 import 'package:flutter/material.dart';
-import 'package:mvvmproject/core/utils/app_colors.dart';
-
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import '../utils/app_text_styles.dart';
+import '../utils/app_colors.dart';
 
 class DefaultBtn extends StatelessWidget {
   const DefaultBtn({super.key, required this.onPressed, required this.text});
 
-  final void Function()? onPressed;
   final String text;
+  final  void Function()? onPressed;
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-          onPressed: onPressed,
           style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
-              shadowColor: AppColors.primary,
-              elevation: 5,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              )
+                  borderRadius: BorderRadius.circular(14.r)
+              ),
+              shadowColor: AppColors.primary,
+              elevation: 10
           ),
+          onPressed: onPressed,
           child: Text(
             text,
             style: TextStyle(
                 color: AppColors.white,
-                fontWeight: FontWeight.w300,
-                fontSize: 19
+                fontSize: 19.sp,
+                fontWeight: AppFontWeight.light
             ),
           )
       ),

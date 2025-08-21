@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:mvvmproject/core/utils/app_assets.dart';
 import 'package:mvvmproject/core/utils/app_colors.dart';
 import 'package:mvvmproject/core/widgets/default_btn.dart';
+import 'package:mvvmproject/core/utils/app_paddings.dart';
 class StartScreen extends StatefulWidget {
   const StartScreen({super.key});
 
@@ -17,7 +18,8 @@ class _StartScreenState extends State<StartScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
         body: Padding(
-        padding: const EdgeInsets.all(20),child: Center(
+          padding: AppPaddings.defaultHomePadding,
+          child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children:

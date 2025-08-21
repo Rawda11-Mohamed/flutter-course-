@@ -1,20 +1,60 @@
-import 'package:bloc/bloc.dart';
-import 'package:meta/meta.dart';
-import'today_tasks_state.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mvvmproject/features/data/repo/auth_repo_imp.dart';
+import 'package:mvvmproject/features/data/models/task_model.dart';
+import 'today_tasks_state.dart';
 
 class TodayTasksCubit extends Cubit<TodayTasksState> {
-  TodayTasksCubit() : super(const TodayTasksState());
+  final AuthRepoImp authRepo;
 
-  void setTasks(List<TaskModel> tasks) {
-    emit(state.copyWith(tasks: tasks));
+  TodayTasksCubit(this.authRepo) : super(TodayTasksInitial());
+
+  static TodayTasksCubit get(context) => BlocProvider.of<TodayTasksCubit>(context);
+
+  List<TaskModel> _allTasks = [];
+  List<TaskModel> _filteredTasks = [];
+  String _searchQuery = '';
+  List<TaskModel> get allTasks => _allTasks;
+
+  List<TaskModel> get filteredTasks => _filteredTasks;
+
+  Future<void> loadTasks() async {
+    emit(TodayTasksLoading());
+    try {
+      final user = authRepo.auth.currentUser;
+      if (user == null) throw Exception("No user is signed in.");
+
+      final snapshot = await authRepo.firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('tasks')
+          .get();
+
+      _allTasks = snapshot.docs.map((doc) {
+        return TaskModel.fromJson({...doc.data(), 'id': doc.id});
+      }).toList();
+
+      _filteredTasks = List.from(_allTasks);
+      emit(TodayTasksLoaded(_allTasks));
+    } on Exception catch (e) {
+      emit(TodayTasksError(e.toString()));
+    }
   }
 
   void updateSearchQuery(String query) {
-    emit(state.copyWith(searchQuery: query));
+    _searchQuery = query.toLowerCase();
+    _applyFilter();
   }
 
-  List<TaskModel> get filteredTasks {
-    if (state.searchQuery.isEmpty) return state.tasks;
-    return state.tasks.where((t) => t.task.toLowerCase().contains(state.searchQuery.toLowerCase())).toList();
+  void _applyFilter() {
+    if (_searchQuery.isEmpty) {
+      _filteredTasks = List.from(_allTasks);
+    } else {
+      _filteredTasks = _allTasks.where((task) {
+        return task.title.toLowerCase().contains(_searchQuery) ||
+            task.description.toLowerCase().contains(_searchQuery) ||
+            task.category.toLowerCase().contains(_searchQuery);
+      }).toList();
+    }
+    emit(TodayTasksLoaded(_filteredTasks));
   }
 }

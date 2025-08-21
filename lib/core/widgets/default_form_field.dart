@@ -1,43 +1,54 @@
 import 'package:flutter/material.dart';
-
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import '../utils/app_text_styles.dart';
 import '../utils/app_colors.dart';
 
 class DefaultFormField extends StatelessWidget {
-  const DefaultFormField(
-      {super.key, this.validator, required this.controller, required this.hintText,
-        required this.prefixIcon, this.suffixIcon, this.obscureText = false});
+  const DefaultFormField({super.key, required this.controller,
+    required this.prefixIcon, this.suffixIcon, required this.hintText,
+    this.obscureText = false});
 
-  final String? Function(String?)? validator;
-  final TextEditingController controller;
-  final String hintText;
+  final TextEditingController controller ;
   final Widget prefixIcon;
   final Widget? suffixIcon;
+  final String hintText;
   final bool obscureText;
-
-  InputBorder borderBuilder() => OutlineInputBorder(
-      borderRadius: BorderRadius.circular(15),
-      borderSide: BorderSide(
-          color: AppColors.lightGrey
-      )
-  );
   @override
   Widget build(BuildContext context) {
     return TextFormField(
       controller: controller,
-      validator: validator,
+      style: TextStyle(
+          color: AppColors.black,
+          fontSize: 14.sp,
+          fontWeight: AppFontWeight.light
+      ),
       obscureText: obscureText,
       decoration: InputDecoration(
-        fillColor: Colors.white,
         filled: true,
-        hintText: hintText,
+        fillColor: AppColors.white,
         prefixIcon: prefixIcon,
         suffixIcon: suffixIcon,
+        hintText: hintText,
+        hintStyle: TextStyle(
+            fontWeight: AppFontWeight.extraLight,
+            fontSize: 14.sp,
+            color: AppColors.lightGrey
+        ),
         border: borderBuilder(),
-        focusedBorder: borderBuilder(),
         enabledBorder: borderBuilder(),
+        focusedBorder: borderBuilder(color: AppColors.primary),
+        focusedErrorBorder: borderBuilder(color: AppColors.primary),
+        errorBorder: borderBuilder(color: AppColors.statusMissed),
+
 
       ),
-
     );
   }
+
+  InputBorder borderBuilder({Color color = AppColors.lightGrey})=>OutlineInputBorder(
+      borderRadius: BorderRadius.circular(15.r),
+      borderSide: BorderSide(
+          color: color
+      )
+  );
 }

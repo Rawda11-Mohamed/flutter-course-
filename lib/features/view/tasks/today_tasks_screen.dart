@@ -1,168 +1,148 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../core/utils/app_colors.dart';
+import '../../../core/utils/app_paddings.dart';
+import 'package:mvvmproject/features/cubit/today_tasks_cubit.dart';
+import 'package:mvvmproject/features/cubit/today_tasks_state.dart';
+import 'package:mvvmproject/features/data/models/task_model.dart';
 import 'package:mvvmproject/core/widgets/task_card.dart';
-import 'package:mvvmproject/core/widgets/filter_modal.dart';
-import 'package:mvvmproject/core/utils/app_colors.dart';
-import '../../../core/utils/app_assets.dart';
+import 'edit_task_screen.dart';
 
-class TodayTasksScreen extends StatefulWidget {
+class TodayTasksScreen extends StatelessWidget {
   const TodayTasksScreen({super.key});
 
   @override
-  State<TodayTasksScreen> createState() => _TasksScreenState();
-}
-
-class _TasksScreenState extends State<TodayTasksScreen> {
-  void _showFilterModal(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => const FilterModal(),
-    );
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header Row
-              Row(
+    final cubit = TodayTasksCubit.get(context);
+
+    if (cubit.allTasks.isEmpty) {
+      cubit.loadTasks();
+    }
+
+    return BlocBuilder<TodayTasksCubit, TodayTasksState>(
+      builder: (context, state) {
+        if (state is TodayTasksLoading) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (state is TodayTasksError) {
+          return Scaffold(
+            body: Center(child: Text(state.message)),
+          );
+        }
+
+        return Scaffold(
+          body: SafeArea(
+            child: Padding(
+              padding: AppPaddings.defaultHomePadding,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back_ios),
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                  ),
-                  const Expanded(
-                    child: Center(
-                      child: Text(
-                        'Tasks',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                  _buildHeader(context),
+                  const SizedBox(height: 23),
+                  _buildSearchBar(context),
+                  const SizedBox(height: 30),
+                  _buildResultsHeader(cubit.filteredTasks.length),
+                  const SizedBox(height: 27),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: cubit.filteredTasks.length,
+                      itemBuilder: (context, index) {
+                        final TaskModel task = cubit.filteredTasks[index];
+                        return TaskCard(
+                          model: task,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => EditTaskScreen(model: task),
+                              ),
+                            );
+                          },
+                        );
+                      },
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 23),
-
-              // Search Bar
-              _buildSearchBar(),
-              const SizedBox(height: 30),
-
-              // Results header
-              _buildResultsHeader(),
-              const SizedBox(height: 27),
-
-              // Tasks List
-              Expanded(
-                child: ListView(
-                  shrinkWrap: true,
-                  children: const [
-                    TaskCard(
-                      task: 'Go to supermarket to buy some milk & eggs',
-                      status: 'In Progress',
-                      statusColor: AppColors.black,
-                      iconColor: AppColors.black,
-                      icon: AppAssets.workTaskIcon,
-                      StatusContainerColor: Color(0xFFCEEBDC),
-                    ),
-                    TaskCard(
-                      task: 'Go to supermarket to buy some milk & eggs',
-                      status: 'Done',
-                      statusColor: AppColors.white,
-                      iconColor: AppColors.black,
-                      icon: AppAssets.workTaskIcon,
-                      StatusContainerColor: AppColors.green,
-                    ),
-                    TaskCard(
-                      task: 'Add new feature for Do It app and commit it',
-                      status: 'Done',
-                      statusColor: AppColors.white,
-                      iconColor: AppColors.pink,
-                      icon: AppAssets.homeTaskIcon,
-                      StatusContainerColor: AppColors.green,
-                    ),
-                    TaskCard(
-                      task: 'Improve my English skills by trying to speak',
-                      status: 'Missed',
-                      statusColor: AppColors.white,
-                      iconColor: AppColors.green,
-                      icon: AppAssets.PersonIcon,
-                      StatusContainerColor: AppColors.statusMissed,
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
-
-      // Floating Action Button
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showFilterModal(context),
-        backgroundColor: AppColors.green,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: const Icon(Icons.menu),
-      ),
+          floatingActionButton: FloatingActionButton(
+            onPressed: () {
+              // filter modal
+            },
+            backgroundColor: AppColors.green,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.menu),
+          ),
+        );
+      },
     );
   }
+}
 
-  Widget _buildSearchBar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(30.0),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey,
-            spreadRadius: 2,
-            blurRadius: 5,
-            offset: const Offset(0, 3),
-          ),
-        ],
+Widget _buildHeader(BuildContext context) {
+  return Row(
+    children: [
+      IconButton(
+        icon: const Icon(Icons.arrow_back_ios),
+        onPressed: () => Navigator.pop(context),
       ),
-      child: const TextField(
-        decoration: InputDecoration(
-          hintText: 'Search...',
-          border: InputBorder.none,
-          suffixIcon: Icon(Icons.search, color: Colors.grey),
+      const Expanded(
+        child: Center(
+          child: Text(
+            'Tasks',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
         ),
       ),
-    );
-  }
+    ],
+  );
+}
 
-  Widget _buildResultsHeader() {
-    return const Row(
-      children: [
-        Text(
-          'Results',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        SizedBox(width: 8),
-        Text(
-          '4',
-          style: TextStyle(
-            fontSize: 16,
-            color: Colors.grey,
-          ),
+Widget _buildSearchBar(BuildContext context) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(30.0),
+      boxShadow: const [
+        BoxShadow(
+          color: Colors.grey,
+          spreadRadius: 2,
+          blurRadius: 5,
+          offset: Offset(0, 3),
         ),
       ],
-    );
-  }
+    ),
+    child: TextField(
+      onChanged: (value) =>
+          context.read<TodayTasksCubit>().updateSearchQuery(value),
+      decoration: const InputDecoration(
+        hintText: 'Search...',
+        border: InputBorder.none,
+        suffixIcon: Icon(Icons.search, color: Colors.grey),
+      ),
+    ),
+  );
+}
+
+Widget _buildResultsHeader(int count) {
+  return Row(
+    children: [
+      const Text(
+        'Results',
+        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      ),
+      const SizedBox(width: 8),
+      Text(
+        '$count',
+        style: const TextStyle(fontSize: 16, color: Colors.grey),
+      ),
+    ],
+  );
 }
