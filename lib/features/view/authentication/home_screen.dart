@@ -9,15 +9,31 @@ import '../../../../core/utils/app_paddings.dart';
 import 'package:mvvmproject/features/cubit/home_cubit.dart';
 import 'package:mvvmproject/features/cubit/home_state.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Load tasks when screen initializes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<HomeCubit>().loadTasks();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<HomeCubit, HomeState>(
       builder: (context, state) {
-        if (state is HomeInitial) {
-          return const Center(child: CircularProgressIndicator());
+        if (state is HomeInitial || state is HomeLoading) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
 
         if (state is HomeLoaded) {
@@ -25,44 +41,70 @@ class HomeScreen extends StatelessWidget {
             backgroundColor: Colors.grey[100],
             floatingActionButton: FloatingActionButton(
               backgroundColor: AppColors.green,
-              onPressed: () {
-                Navigator.pushNamed(context, '/addTask');
+              onPressed: () async {
+                await Navigator.pushNamed(context, '/addTask');
+                // Refresh tasks after adding a new task
+                context.read<HomeCubit>().refreshTasks();
               },
               child: const Icon(Icons.add, color: Colors.white),
             ),
-            body: SafeArea(
-              child: SingleChildScrollView(
-                padding: AppPaddings.defaultHomePadding,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildHeader(context, state.username),
-                    const SizedBox(height: 25),
-                    const ProgressCard(),
-                    const SizedBox(height: 20),
-                    const Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          "In Progress",
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                        CircleAvatar(
-                          radius: 12,
-                          backgroundColor: Colors.green,
-                          child: Text(
-                            "5",
-                            style: TextStyle(color: Colors.white, fontSize: 12),
+            body: RefreshIndicator(
+              onRefresh: () async {
+                context.read<HomeCubit>().refreshTasks();
+              },
+              child: SafeArea(
+                child: SingleChildScrollView(
+                  padding: AppPaddings.defaultHomePadding,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildHeader(context, state.username),
+                      const SizedBox(height: 25),
+                      ProgressCard(tasks: state.tasks),
+                      const SizedBox(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            "In Progress",
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    const InProgressTasks(),
-                    const SizedBox(height: 25),
-                    const TaskGroups(),
-                  ],
+                          CircleAvatar(
+                            radius: 12,
+                            backgroundColor: Colors.green,
+                            child: Text(
+                              "${state.tasks.where((task) => task.status == 'Pending' || task.status == 'In Progress').length}",
+                              style: const TextStyle(color: Colors.white, fontSize: 12),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      InProgressTasks(tasks: state.tasks),
+                      const SizedBox(height: 25),
+                      TaskGroups(tasks: state.tasks),
+                    ],
+                  ),
                 ),
+              ),
+            ),
+          );
+        }
+
+        if (state is HomeError) {
+          return Scaffold(
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(state.message),
+                  ElevatedButton(
+                    onPressed: () {
+                      context.read<HomeCubit>().loadTasks();
+                    },
+                    child: const Text('Retry'),
+                  ),
+                ],
               ),
             ),
           );

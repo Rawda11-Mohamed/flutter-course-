@@ -2,11 +2,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:mvvmproject/core/widgets/icons_containers.dart';
+import 'package:mvvmproject/features/data/models/task_model.dart';
 import '../../../../core/utils/app_colors.dart';
 import '../../../../core/utils/app_assets.dart';
 
 class TaskGroups extends StatelessWidget {
-  const TaskGroups({super.key});
+  final List<TaskModel> tasks;
+  
+  const TaskGroups({super.key, required this.tasks});
+
+  List<TaskModel> get personalTasks => tasks.where((task) => 
+    task.category.toLowerCase() == 'personal'
+  ).toList();
+
+  List<TaskModel> get homeTasks => tasks.where((task) => 
+    task.category.toLowerCase() == 'home'
+  ).toList();
+
+  List<TaskModel> get workTasks => tasks.where((task) => 
+    task.category.toLowerCase() == 'work'
+  ).toList();
 
   @override
   Widget build(BuildContext context) {
@@ -19,15 +34,32 @@ class TaskGroups extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         _buildGroupItem(
-            AppAssets.PersonIcon, "Personal Task", AppColors.green, "5"),
-        _buildGroupItem(AppAssets.homeTaskIcon, "Home Task", AppColors.pink, "3"),
-        _buildGroupItem(AppAssets.workTaskIcon, "Work Task", AppColors.black, ""),
+          context,
+          AppAssets.PersonIcon, 
+          "Personal Task", 
+          AppColors.green, 
+          personalTasks.length.toString()
+        ),
+        _buildGroupItem(
+          context,
+          AppAssets.homeTaskIcon, 
+          "Home Task", 
+          AppColors.pink, 
+          homeTasks.length.toString()
+        ),
+        _buildGroupItem(
+          context,
+          AppAssets.workTaskIcon, 
+          "Work Task", 
+          AppColors.black, 
+          workTasks.length.toString()
+        ),
       ],
     );
   }
 
   Widget _buildGroupItem(
-      String iconPath, String title, Color color, String count) {
+      BuildContext context, String iconPath, String title, Color color, String count) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
@@ -52,7 +84,8 @@ class TaskGroups extends StatelessWidget {
                 height: 20,
               ),
               onPressed: () {
-
+                // Navigate to filtered tasks
+                Navigator.pushNamed(context, '/todayTasks');
               },
             ),
           ),
@@ -63,7 +96,7 @@ class TaskGroups extends StatelessWidget {
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
             ),
           ),
-          if (count.isNotEmpty)
+          if (count != "0")
             CircleAvatar(
               backgroundColor: AppColors.taskCardLightGreen,
               radius: 12,
@@ -76,5 +109,4 @@ class TaskGroups extends StatelessWidget {
       ),
     );
   }
-
 }

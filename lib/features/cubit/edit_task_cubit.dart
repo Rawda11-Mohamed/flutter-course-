@@ -1,58 +1,60 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:mvvmproject/features/data/repo/auth_repo_imp.dart';
+import 'package:mvvmproject/features/cubit/edit_task_state.dart';
+import 'package:mvvmproject/features/data/repo/edit_task_repo.dart';
 import 'package:mvvmproject/features/data/models/task_model.dart';
-import 'edit_task_state.dart';
+
+enum TaskAction { none, update, delete, markDone }
 
 class EditTaskCubit extends Cubit<EditTaskState> {
-  final AuthRepoImp authRepo;
+  final EditTaskRepo _repo;
+  TaskAction lastAction = TaskAction.none;
 
-  TaskModel task;
+  EditTaskCubit(this._repo) : super(EditTaskInitial());
 
-  EditTaskCubit(this.authRepo, {required this.task}) : super(EditTaskInitial());
-
-  static EditTaskCubit get(context) => BlocProvider.of<EditTaskCubit>(context);
-
-  void loadTask(TaskModel model) {
-    task = model;
-    emit(EditTaskInitial());
-  }
-
-  void updateTitle(String title) {
-    task = task.copyWith(title: title);
-  }
-
-  void updateDescription(String description) {
-    task = task.copyWith(description: description);
-  }
-
-  Future<void> markAsDone() async {
-    emit(EditTaskLoading());
+  Future<void> markTaskAsDone(String taskId) async {
     try {
-      await authRepo.updateTaskStatus(task.id, 'completed');
-      task = task.copyWith(status: 'completed');
+      lastAction = TaskAction.markDone;
+      emit(EditTaskLoading());
+      await _repo.markTaskAsDone(taskId);
       emit(EditTaskSuccess());
-    } on Exception catch (e) {
-      emit(EditTaskError(e.toString()));
+    } catch (e) {
+      emit(EditTaskFailure('Mark failed: $e'));
     }
   }
 
-  Future<void> updateTask() async {
-    emit(EditTaskLoading());
+  Future<void> updateTask(Map<String, dynamic> taskData) async {
     try {
-      await authRepo.updateTask(task);
+      lastAction = TaskAction.update;
+      emit(EditTaskLoading());
+
+      final updatedTask = TaskModel(
+        id: taskData['id'],
+        title: taskData['title'],
+        description: taskData['description'],
+        status: taskData['status'] ?? 'Pending',
+        category: taskData['category'] ?? 'Home',
+        statusColor: taskData['statusColor'] ?? 0xFF000000,
+        iconColor: taskData['iconColor'] ?? 0xFF000000,
+        icon: taskData['icon'] ?? 'icon_home',
+        statusContainerColor: taskData['statusContainerColor'] ?? 0xFFFFFFFF,
+        dateTime: taskData['dateTime'],
+      );
+
+      await _repo.updateTask(updatedTask);
       emit(EditTaskSuccess());
-    } on Exception catch (e) {
-      emit(EditTaskError(e.toString()));
+    } catch (e) {
+      emit(EditTaskFailure('Update failed: $e'));
     }
   }
 
-  Future<void> deleteTask() async {
-    emit(EditTaskLoading());
+  Future<void> deleteTask(String taskId) async {
     try {
-      await authRepo.deleteTask(task.id);
-      emit(EditTaskDeleted());
-    } on Exception catch (e) {
-      emit(EditTaskError(e.toString()));
+      lastAction = TaskAction.delete;
+      emit(EditTaskLoading());
+      await _repo.deleteTask(taskId);
+      emit(EditTaskSuccess());
+    } catch (e) {
+      emit(EditTaskFailure('Delete failed: $e'));
     }
   }
 }

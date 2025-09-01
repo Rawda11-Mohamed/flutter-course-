@@ -19,14 +19,14 @@ class TaskCard extends StatelessWidget {
   });
 
   String get displayStatus {
-    if (model.status == 'completed') {
+    if (model.status == 'Done') {
       return 'Done';
     }
 
     if (model.dateTime != null) {
       final taskDate = DateTime.parse(model.dateTime!);
       final now = DateTime.now();
-      if (taskDate.isBefore(now) && model.status != 'completed') {
+      if (taskDate.isBefore(now) && model.status != 'Done') {
         return 'Missed';
       }
     }
@@ -37,11 +37,11 @@ class TaskCard extends StatelessWidget {
 
   Color get statusColor {
     switch (model.status) {
-      case 'in_progress':
+      case 'Pending':
         return AppColors.black;
-      case 'completed':
+      case 'Done':
         return AppColors.white;
-      case 'overdue':
+      case 'Missed':
         return AppColors.white;
       default:
         return AppColors.black;
@@ -50,11 +50,11 @@ class TaskCard extends StatelessWidget {
 
   Color get statusBgColor {
     switch (model.status) {
-      case 'in_progress':
+      case 'Pending':
         return AppColors.taskCardLightGreen;
-      case 'completed':
+      case 'Done':
         return AppColors.primary;
-      case 'overdue':
+      case 'Missed':
         return AppColors.statusMissed;
       default:
         return AppColors.primary;
@@ -62,7 +62,7 @@ class TaskCard extends StatelessWidget {
   }
 
   String get iconAsset {
-    switch (model.category) {
+    switch (model.category.toLowerCase()) {
       case 'work':
         return AppAssets.workTaskIcon;
       case 'personal':
@@ -75,7 +75,7 @@ class TaskCard extends StatelessWidget {
   }
 
   Color get bgColor {
-    switch (model.category) {
+    switch (model.category.toLowerCase()) {
       case 'work':
         return AppColors.black;
       case 'personal':
@@ -88,7 +88,7 @@ class TaskCard extends StatelessWidget {
   }
 
   Color get iconBgColor {
-    switch (model.category) {
+    switch (model.category.toLowerCase()) {
       case 'work':
         return AppColors.black;
       case 'personal':

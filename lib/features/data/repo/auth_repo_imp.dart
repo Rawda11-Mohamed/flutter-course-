@@ -1,67 +1,70 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:dartz/dartz.dart';
+
 import '../models/user_model.dart';
-import 'package:mvvmproject/features/data/models/task_model.dart';
+import '../models/task_model.dart';
+
+class Failure {
+  final String message;
+  Failure(this.message);
+}
 
 class AuthRepoImp {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
   FirebaseAuth get auth => _auth;
   FirebaseFirestore get firestore => _firestore;
 
-  Future<UserModel> login({required String email, required String password}) async {
+  // =================== LOGIN ===================
+  Future<Either<Failure, UserModel>> login({
+    required String email,
+    required String password,
+  }) async {
     try {
-      UserCredential credential = await _auth.signInWithEmailAndPassword(
+      final credential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
 
-      User? user = credential.user;
+      final user = credential.user;
       if (user == null) {
-        throw Exception("User not found after login.");
+        return left(Failure("User not found after login."));
       }
 
-      DocumentSnapshot userData = await _firestore.collection('users').doc(user.uid).get();
+      final doc = await _firestore.collection('users').doc(user.uid).get();
 
-      if (userData.exists) {
-        return UserModel.fromJson({
-          ...userData.data() as Map<String, dynamic>,
-          'uid': user.uid,
-        });
+      if (doc.exists) {
+        return right(UserModel.fromJson(doc.data() as Map<String, dynamic>));
       } else {
-        return UserModel(
+        return right(UserModel(
           name: user.displayName ?? 'Unknown',
           email: user.email ?? '',
           image: user.photoURL,
-        );
+        ));
       }
     } on FirebaseAuthException catch (e) {
-      throw Exception(e.message);
+      return left(Failure(e.message ?? "Auth error"));
     } catch (e) {
-      throw Exception('Login failed: $e');
+      return left(Failure('Login failed: $e'));
     }
   }
 
-  Future<UserModel> register({
+  // =================== REGISTER ===================
+  Future<Either<Failure, UserModel>> register({
     required String name,
     required String email,
     required String password,
   }) async {
-    print(" Starting Firebase registration for: $email");
-
     try {
-      UserCredential credential = await _auth.createUserWithEmailAndPassword(
+      final credential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
 
-      User? user = credential.user;
-      if (user == null) {
-        print(" User is null after creation");
-        throw Exception("User not created.");
-      }
-
-      print(" User created with UID: ${user.uid}");
+      final user = credential.user;
+      if (user == null) return left(Failure("User not created."));
 
       final userModel = UserModel(
         name: name,
@@ -69,96 +72,131 @@ class AuthRepoImp {
         createdAt: DateTime.now(),
       );
 
-      await _firestore.collection('users').doc(user.uid).set(userModel.toJson());
-      print(" User saved to Firestore");
+      await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .set(userModel.toJson());
 
-      return userModel;
+      return right(userModel);
     } on FirebaseAuthException catch (e) {
-      print(" FirebaseAuthException: ${e.code} - ${e.message}");
       if (e.code == 'weak-password') {
-        throw Exception('The password provided is too weak.');
+        return left(Failure('The password provided is too weak.'));
       } else if (e.code == 'email-already-in-use') {
-        throw Exception('The account already exists for that email.');
+        return left(Failure('The account already exists for that email.'));
       } else {
-        throw Exception(e.message);
+        return left(Failure(e.message ?? "Auth error"));
       }
     } catch (e) {
-      print(" Unexpected error: $e");
-      throw Exception('Registration failed: $e');
+      return left(Failure('Registration failed: $e'));
     }
   }
-  Future<void> signOut() async {
-    await _auth.signOut();
-  }
 
-  UserModel? getCurrentUser() {
-    User? user = _auth.currentUser;
-    if (user != null) {
-      return UserModel(
-        name: user.displayName ?? 'Unknown',
-        email: user.email ?? '',
-        image: user.photoURL,
-      );
+  // =================== SIGN OUT ===================
+  Future<Either<Failure, Unit>> signOut() async {
+    try {
+      await _auth.signOut();
+      return right(unit);
+    } catch (e) {
+      return left(Failure("Failed to sign out: $e"));
     }
-    return null;
   }
 
-  Future<void> updateUserName(String newName) async {
-    User? user = _auth.currentUser;
-    if (user == null) throw Exception("No user is signed in.");
+  // =================== CURRENT USER ===================
+  Either<Failure, UserModel?> getCurrentUser() {
+    try {
+      final user = _auth.currentUser;
+      if (user != null) {
+        return right(UserModel(
+          name: user.displayName ?? 'Unknown',
+          email: user.email ?? '',
+          image: user.photoURL,
+        ));
+      }
+      return right(null);
+    } catch (e) {
+      return left(Failure("Failed to get current user: $e"));
+    }
+  }
+
+  // =================== UPDATE USER NAME ===================
+  Future<Either<Failure, Unit>> updateUserName(String newName) async {
+    final user = _auth.currentUser;
+    if (user == null) return left(Failure("No user is signed in."));
 
     try {
       await _firestore.collection('users').doc(user.uid).update({
         'name': newName,
         'updatedAt': FieldValue.serverTimestamp(),
       });
-    } on FirebaseException catch (e) {
-      throw Exception(e.message);
+      return right(unit);
     } catch (e) {
-      throw Exception("Failed to update name: $e");
+      return left(Failure("Failed to update name: $e"));
     }
   }
-  Future<void> updateTaskStatus(String taskId, String newStatus) async {
-    final user = _auth.currentUser;
-    if (user == null) throw Exception("No user is signed in.");
 
-    await _firestore
-        .collection('users')
-        .doc(user.uid)
-        .collection('tasks')
-        .doc(taskId)
-        .update({
-      'status': newStatus,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
+  // =================== UPDATE TASK STATUS ===================
+  Future<Either<Failure, Unit>> updateTaskStatus(
+      String taskId, String newStatus) async {
+    final user = _auth.currentUser;
+    if (user == null) return left(Failure("No user is signed in."));
+
+    try {
+      await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('tasks')
+          .doc(taskId)
+          .update({
+        'status': newStatus,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      return right(unit);
+    } catch (e) {
+      return left(Failure("Failed to update task status: $e"));
+    }
   }
 
-  Future<void> updateTask(TaskModel task) async {
+  // =================== UPDATE TASK ===================
+  Future<Either<Failure, Unit>> updateTask(TaskModel task) async {
     final user = _auth.currentUser;
-    if (user == null) throw Exception("No user is signed in.");
+    if (user == null) return left(Failure("No user is signed in."));
 
-    await _firestore
-        .collection('users')
-        .doc(user.uid)
-        .collection('tasks')
-        .doc(task.id)
-        .update(task.toJson());
+    try {
+      await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('tasks')
+          .doc(task.id)
+          .update(task.toJson());
+      return right(unit);
+    } catch (e) {
+      return left(Failure("Failed to update task: $e"));
+    }
   }
 
-  Future<void> deleteTask(String taskId) async {
+  // =================== DELETE TASK ===================
+  Future<Either<Failure, Unit>> deleteTask(String taskId) async {
     final user = _auth.currentUser;
-    if (user == null) throw Exception("No user is signed in.");
+    if (user == null) return left(Failure("No user is signed in."));
 
-    await _firestore
-        .collection('users')
-        .doc(user.uid)
-        .collection('tasks')
-        .doc(taskId)
-        .delete();
+    try {
+      await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('tasks')
+          .doc(taskId)
+          .delete();
+      return right(unit);
+    } catch (e) {
+      return left(Failure("Failed to delete task: $e"));
+    }
   }
-  Future<void> changePassword(String oldPassword, String newPassword) async {
-    User? user = _auth.currentUser;
-    if (user == null) throw Exception("No user is signed in.");
+
+  // =================== CHANGE PASSWORD ===================
+  Future<Either<Failure, Unit>> changePassword(
+      String oldPassword, String newPassword) async {
+    final user = _auth.currentUser;
+    if (user == null) return left(Failure("No user is signed in."));
 
     try {
       final credential = EmailAuthProvider.credential(
@@ -167,34 +205,53 @@ class AuthRepoImp {
       );
 
       await user.reauthenticateWithCredential(credential);
-
       await user.updatePassword(newPassword);
+
+      return right(unit);
     } on FirebaseAuthException catch (e) {
       if (e.code == 'wrong-password') {
-        throw Exception('The old password is incorrect.');
+        return left(Failure('The old password is incorrect.'));
       } else if (e.code == 'requires-recent-login') {
-        throw Exception('Please log in again to change your password.');
+        return left(Failure('Please log in again to change your password.'));
       } else {
-        throw Exception(e.message);
+        return left(Failure(e.message ?? "Password change error"));
       }
     } catch (e) {
-      throw Exception('Failed to change password: $e');
+      return left(Failure('Failed to change password: $e'));
     }
   }
 
-  Future<void> updateUserLanguage(String languageCode) async {
-    User? user = _auth.currentUser;
-    if (user == null) throw Exception("No user is signed in.");
+  // =================== UPDATE LANGUAGE ===================
+  Future<Either<Failure, Unit>> updateUserLanguage(String languageCode) async {
+    final user = _auth.currentUser;
+    if (user == null) return left(Failure("No user is signed in."));
 
     try {
       await _firestore.collection('users').doc(user.uid).update({
         'language': languageCode,
         'updatedAt': FieldValue.serverTimestamp(),
       });
-    } on FirebaseException catch (e) {
-      throw Exception(e.message);
+      return right(unit);
     } catch (e) {
-      throw Exception("Failed to update language: $e");
+      return left(Failure("Failed to update language: $e"));
+    }
+  }
+
+  // =================== ADD TASK ===================
+  Future<Either<Failure, Unit>> addTask(TaskModel task) async {
+    final user = _auth.currentUser;
+    if (user == null) return left(Failure("No user is signed in."));
+
+    try {
+      await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('tasks')
+          .doc(task.id)
+          .set(task.toJson());
+      return right(unit);
+    } catch (e) {
+      return left(Failure("Failed to add task: $e"));
     }
   }
 }

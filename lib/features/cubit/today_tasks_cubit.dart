@@ -13,15 +13,18 @@ class TodayTasksCubit extends Cubit<TodayTasksState> {
   List<TaskModel> _allTasks = [];
   List<TaskModel> _filteredTasks = [];
   String _searchQuery = '';
-  List<TaskModel> get allTasks => _allTasks;
 
+  List<TaskModel> get allTasks => _allTasks;
   List<TaskModel> get filteredTasks => _filteredTasks;
 
   Future<void> loadTasks() async {
     emit(TodayTasksLoading());
     try {
       final user = authRepo.auth.currentUser;
-      if (user == null) throw Exception("No user is signed in.");
+      if (user == null) {
+        emit(TodayTasksError("No user is signed in."));
+        return;
+      }
 
       final snapshot = await authRepo.firestore
           .collection('users')
@@ -30,12 +33,16 @@ class TodayTasksCubit extends Cubit<TodayTasksState> {
           .get();
 
       _allTasks = snapshot.docs.map((doc) {
-        return TaskModel.fromJson({...doc.data(), 'id': doc.id});
-      }).toList();
+        try {
+          return TaskModel.fromJson({...doc.data(), 'id': doc.id});
+        } catch (e) {
+          return null;
+        }
+      }).where((task) => task != null).cast<TaskModel>().toList();
 
       _filteredTasks = List.from(_allTasks);
-      emit(TodayTasksLoaded(_allTasks));
-    } on Exception catch (e) {
+      emit(TodayTasksLoaded(_filteredTasks));
+    } catch (e) {
       emit(TodayTasksError(e.toString()));
     }
   }
@@ -56,5 +63,30 @@ class TodayTasksCubit extends Cubit<TodayTasksState> {
       }).toList();
     }
     emit(TodayTasksLoaded(_filteredTasks));
+  }
+
+  Future<void> deleteTask(String taskId) async {
+    emit(TodayTasksLoading());
+    try {
+      final user = authRepo.auth.currentUser;
+      if (user == null) {
+        emit(TodayTasksError("No user is signed in."));
+        return;
+      }
+
+      await authRepo.firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('tasks')
+          .doc(taskId)
+          .delete();
+
+      _allTasks.removeWhere((task) => task.id == taskId);
+      _applyFilter();
+
+      emit(TodayTasksLoaded(_filteredTasks));
+    } catch (e) {
+      emit(TodayTasksError(e.toString()));
+    }
   }
 }

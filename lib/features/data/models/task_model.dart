@@ -27,12 +27,12 @@ class TaskModel {
     id = json['id'];
     title = json['title'];
     description = json['description'];
-    status = json['status'];
-    category = json['category'];
-    statusColor = json['statusColor'];
-    iconColor = json['iconColor'];
-    icon = json['icon'];
-    statusContainerColor = json['statusContainerColor'];
+    status = json['status'] ?? 'Pending';
+    category = json['category'] ?? 'General';
+    statusColor = json['statusColor'] ?? 0xFF000000;
+    iconColor = json['iconColor'] ?? 0xFF000000;
+    icon = json['icon'] ?? 'icon_home';
+    statusContainerColor = json['statusContainerColor'] ?? 0xFFFFFFFF;
     dateTime = json['dateTime'];
   }
 
@@ -50,6 +50,7 @@ class TaskModel {
       'dateTime': dateTime,
     };
   }
+
   TaskModel copyWith({
     String? id,
     String? title,

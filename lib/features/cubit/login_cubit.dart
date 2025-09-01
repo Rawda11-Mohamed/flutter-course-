@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'package:mvvmproject/features/data/models/user_model.dart';
 import 'package:mvvmproject/features/data/repo/auth_repo_imp.dart';
-
 import 'login_state.dart';
 
 class LoginCubit extends Cubit<LoginState> {
@@ -38,11 +36,12 @@ class LoginCubit extends Cubit<LoginState> {
     }
 
     emit(LoginLoading());
-    try {
-      final user = await authRepo.login(email: email, password: password);
-      emit(LoginSuccess(user));
-    } on Exception catch (e) {
-      emit(LoginError(e.toString()));
-    }
+
+    final result = await authRepo.login(email: email, password: password);
+
+    result.fold(
+          (failure) => emit(LoginError(failure.message)), // Left => error
+          (user) => emit(LoginSuccess(user)),             // Right => success
+    );
   }
 }

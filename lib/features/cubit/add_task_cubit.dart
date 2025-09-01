@@ -31,7 +31,7 @@ class AddTaskCubit extends Cubit<AddTaskState> {
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         title: title,
         description: description,
-        status: 'pending',
+        status: 'Pending',
         category: group,
         statusColor: 0xFF2196F3,
         iconColor: 0xFFFFFFFF,

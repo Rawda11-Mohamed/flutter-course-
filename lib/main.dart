@@ -11,13 +11,10 @@ import 'features/view/tasks/edit_task_screen.dart';
 import 'features/view/authentication/update_screen.dart';
 import 'features/view/authentication/change_password_screen.dart';
 import 'features/view/authentication/language_screen.dart';
-import 'package:hive_flutter/adapters.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'features/data/models/task_model.dart';
 
-// Bloc
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
 import 'features/data/repo/auth_repo_imp.dart';
@@ -36,7 +33,6 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  await Hive.initFlutter();
   runApp(const MyApp());
 }
 
@@ -47,19 +43,21 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ScreenUtilInit(
       designSize: const Size(375, 812),
-      builder: (context, widget) => MultiBlocProvider(
-        providers: [
-          BlocProvider(create: (context) => LoginCubit(AuthRepoImp())),
-          BlocProvider(create: (context) => RegisterCubit(AuthRepoImp())),
-          BlocProvider(create: (context) => HomeCubit()),
-          BlocProvider(create: (context) => UpdateNameCubit(AuthRepoImp())),
-          BlocProvider(create: (context) => ChangePasswordCubit(AuthRepoImp())),
-          BlocProvider(create: (context) => LanguageCubit()),
-          BlocProvider(create: (context) => AddTaskCubit(AuthRepoImp())),
-          BlocProvider(create: (context) => TodayTasksCubit(AuthRepoImp())),
-        ],
-        child: Provider(
-          create: (context) => AuthRepoImp(),
+      minTextAdapt: true,
+      splitScreenMode: true,
+      builder: (context, widget) => Provider(
+        create: (context) => AuthRepoImp(),
+        child: MultiBlocProvider(
+          providers: [
+            BlocProvider(create: (context) => LoginCubit(Provider.of<AuthRepoImp>(context, listen: false))),
+            BlocProvider(create: (context) => RegisterCubit(Provider.of<AuthRepoImp>(context, listen: false))),
+            BlocProvider(create: (context) => HomeCubit(Provider.of<AuthRepoImp>(context, listen: false))),
+            BlocProvider(create: (context) => UpdateNameCubit(Provider.of<AuthRepoImp>(context, listen: false))),
+            BlocProvider(create: (context) => ChangePasswordCubit(Provider.of<AuthRepoImp>(context, listen: false))),
+            BlocProvider(create: (context) => LanguageCubit()),
+            BlocProvider(create: (context) => AddTaskCubit(Provider.of<AuthRepoImp>(context, listen: false))),
+            BlocProvider(create: (context) => TodayTasksCubit(Provider.of<AuthRepoImp>(context, listen: false))),
+          ],
           child: MaterialApp(
             debugShowCheckedModeBanner: false,
             initialRoute: '/',
@@ -73,12 +71,13 @@ class MyApp extends StatelessWidget {
               '/profile': (context) => const ProfileScreen(),
               '/addTask': (context) => AddTaskScreen(),
               '/editTask': (context) => EditTaskScreen(
-                model: ModalRoute.of(context)!.settings.arguments as TaskModel,
+                taskData: ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?,
               ),
               '/updateName': (context) => const UpdateNameScreen(),
               '/changePassword': (context) => const ChangePasswordScreen(),
               '/language': (context) => const LanguageScreen(),
             },
+            home: widget,
           ),
         ),
       ),

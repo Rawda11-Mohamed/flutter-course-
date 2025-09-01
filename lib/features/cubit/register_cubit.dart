@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'package:mvvmproject/features/data/models/user_model.dart';
 import 'package:mvvmproject/features/data/repo/auth_repo_imp.dart';
-
 import 'register_state.dart';
 
 class RegisterCubit extends Cubit<RegisterState> {
@@ -53,11 +51,12 @@ class RegisterCubit extends Cubit<RegisterState> {
     }
 
     emit(RegisterLoading());
-    try {
-      final user = await authRepo.register(name: name, email: email, password: password);
-      emit(RegisterSuccess(user));
-    } on Exception catch (e) {
-      emit(RegisterError(e.toString()));
-    }
+
+    final result = await authRepo.register(name: name, email: email, password: password);
+
+    result.fold(
+          (failure) => emit(RegisterError(failure.message)), // Left => error
+          (user) => emit(RegisterSuccess(user)),             // Right => success
+    );
   }
 }
