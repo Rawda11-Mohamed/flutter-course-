@@ -6,6 +6,7 @@ import '../../../../core/utils/app_paddings.dart';
 import 'package:mvvmproject/features/cubit/update_name_cubit.dart';
 import 'package:mvvmproject/features/cubit/update_name_state.dart';
 import '../../../../features/data/repo/auth_repo_imp.dart';
+import 'package:mvvmproject/core/widgets/default_btn.dart';
 
 class UpdateNameScreen extends StatefulWidget {
   const UpdateNameScreen({super.key});
@@ -30,9 +31,9 @@ class _UpdateNameScreenState extends State<UpdateNameScreen> {
       child: BlocConsumer<UpdateNameCubit, UpdateNameState>(
         listener: (context, state) {
           if (state is UpdateNameError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message)),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.message)));
           } else if (state is UpdateNameSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Name updated successfully')),
@@ -42,9 +43,7 @@ class _UpdateNameScreenState extends State<UpdateNameScreen> {
         },
         builder: (context, state) {
           return Scaffold(
-            appBar: AppBar(
-              title: const Text('Update Name'),
-            ),
+            appBar: AppBar(title: const Text('Update Name')),
             body: Padding(
               padding: AppPaddings.defaultHomePadding,
               child: Column(
@@ -60,12 +59,14 @@ class _UpdateNameScreenState extends State<UpdateNameScreen> {
                   const SizedBox(height: 30),
                   state is UpdateNameLoading
                       ? const CircularProgressIndicator()
-                      : ElevatedButton(
-                    onPressed: () {
-                      context.read<UpdateNameCubit>().updateName(_nameController.text);
-                    },
-                    child: const Text('Save'),
-                  ),
+                      : DefaultBtn(
+                        text: "Save",
+                        onPressed: () {
+                          context.read<UpdateNameCubit>().updateName(
+                            _nameController.text,
+                          );
+                        },
+                      ),
                 ],
               ),
             ),
